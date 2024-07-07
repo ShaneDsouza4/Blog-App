@@ -37,6 +37,7 @@ userSchema.pre("save", function (next) {
     if (!user.isModified("password")) return;
   
     const salt = randomBytes(16).toString(); //Random bits
+    //const salt = "someRandomSalt";
 
     const hashedPassword = createHmac("sha256", salt) //Algorithm
       .update(user.password) //What to hash
@@ -46,7 +47,28 @@ userSchema.pre("save", function (next) {
     this.password = hashedPassword;
   
     next();
-  });
+});
+
+
+userSchema.static('matchPassword', async function(email, password){
+    const user = await this.findOne({email});
+
+    //if(!user) return false;
+    if(!user) throw new Error("User not Found.");
+
+    const salt = user.salt;
+    const hashedPassword = user.password;
+
+    //Hashing password user provided
+    const userProvidedHash = createHmac("sha256", salt) 
+    .update(password) //user provided
+    .digest("hex"); 
+
+    if(hashedPassword !== userProvidedHash) throw new Error("Incorrect Password");
+
+    //return hashedPassword === userProvidedHash;
+    return user;
+})
 
 const User = model('user', userSchema);
 
